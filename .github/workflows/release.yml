@@ -1,0 +1,48 @@
+name: Build & Sign Release APK
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggered when you push a tag (e.g., git tag v1.1)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # This step decodes your Base64 secret back into the .jks file
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.STR_JAVA_KEYSTORE }}" | base64 --decode > release_key.jks
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        env:
+          # These tell Gradle how to sign the app using your secrets
+          MYAPP_RELEASE_STORE_FILE: release_key.jks
+          MYAPP_RELEASE_STORE_PASSWORD: ${{ secrets.STR_KEYSTORE_PASSWORD }}
+          MYAPP_RELEASE_KEY_ALIAS: ${{ secrets.STR_KEY_ALIAS }}
+          MYAPP_RELEASE_KEY_PASSWORD: ${{ secrets.STR_KEY_PASSWORD }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          # We are now uploading the signed 'release' APK instead of 'debug'
+          files: app/build/outputs/apk/release/app-release.apk
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref }}
+          body: "Official Release build for WakeTracker. Signed and optimized."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

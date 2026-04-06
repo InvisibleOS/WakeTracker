@@ -1,9 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
-    id("org.jetbrains.kotlin.android")
-    // CORRECTED: Version must match Kotlin 2.2.10 + the KSP2 suffix
+    // kotlin.android is COMPLETELY GONE
     id("com.google.devtools.ksp") version "2.2.10-2.0.2"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -19,13 +18,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
-            // ADD THIS SIGNING CONFIG LOGIC
-            signingConfig = signingConfigs.getByName("debug") // Default fallback
+            signingConfig = signingConfigs.getByName("debug")
 
             if (System.getenv("MYAPP_RELEASE_STORE_FILE") != null) {
                 signingConfigs.create("release") {
@@ -38,16 +37,21 @@ android {
             }
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
     }
+    // kotlinOptions block is COMPLETELY GONE
+}
+
+// THIS is the modern replacement for kotlinOptions
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -59,18 +63,21 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
+
     implementation("androidx.compose.material3:material3")
+    implementation("com.google.android.material:material:1.12.0")
+
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
     implementation("androidx.graphics:graphics-shapes:1.1.0")
+
     // --- DATABASE & BACKGROUND ---
     val roomVersion = "2.8.0"
     val workVersion = "2.11.2"
 
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    // KSP handles the code generation for Room
     ksp("androidx.room:room-compiler:$roomVersion")
 
     implementation("androidx.work:work-runtime-ktx:$workVersion")

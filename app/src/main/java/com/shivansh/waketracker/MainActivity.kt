@@ -119,7 +119,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             },
                             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                containerColor = Color.Transparent
+                                containerColor = Color.Transparent,
+                                scrolledContainerColor = Color.Transparent
                             )
                         )
                     },
