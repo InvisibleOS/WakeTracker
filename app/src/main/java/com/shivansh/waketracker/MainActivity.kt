@@ -126,13 +126,13 @@ class MainActivity : ComponentActivity() {
                     },
                     bottomBar = {
                         Box(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 36.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 28.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
-                                shadowElevation = 12.dp,
+                                shape = RoundedCornerShape(32.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shadowElevation = 8.dp,
                                 modifier = Modifier.height(64.dp).wrapContentWidth()
                             ) {
                                 Row(
@@ -160,7 +160,7 @@ class MainActivity : ComponentActivity() {
                     Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
                         when (currentTab) {
                             AppTab.TRACKER -> WakeTrackerScreen(viewModel, sharedPrefs)
-                            AppTab.SETTINGS -> SettingsScreen(sharedPrefs)
+                            AppTab.SETTINGS -> SettingsScreen(viewModel, sharedPrefs)
                         }
                     }
                 }
@@ -330,8 +330,9 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(sharedPrefs: SharedPreferences) {
+fun SettingsScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) {
     var showTimePicker by remember { mutableStateOf(false) }
+    var showClearConfirm by remember { mutableStateOf(false) }
     var targetHour by remember { mutableIntStateOf(sharedPrefs.getInt("target_hour", 8)) }
     var targetMinute by remember { mutableIntStateOf(sharedPrefs.getInt("target_minute", 0)) }
 
@@ -348,6 +349,21 @@ fun SettingsScreen(sharedPrefs: SharedPreferences) {
                 Text(LocalTime.of(targetHour, targetMinute).format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a")), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = { showClearConfirm = true },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            Text("Clear All Data \uD83D\uDDD1\uFE0F", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        }
     }
 
     if (showTimePicker) {
@@ -356,6 +372,27 @@ fun SettingsScreen(sharedPrefs: SharedPreferences) {
             confirmButton = { TextButton(onClick = { targetHour = state.hour; targetMinute = state.minute; sharedPrefs.edit().putInt("target_hour", targetHour).putInt("target_minute", targetMinute).apply(); showTimePicker = false }) { Text(text = "Confirm") } },
             dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(text = "Cancel") } },
             text = { TimePicker(state = state) }
+        )
+    }
+
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Are you sure?") },
+            text = { Text("This will permanently delete all your wake records. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearAllData()
+                        showClearConfirm = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Clear Records", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
+            }
         )
     }
 }

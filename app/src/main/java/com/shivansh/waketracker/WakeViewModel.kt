@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -34,5 +35,11 @@ class WakeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun previousMonth() {
         _currentMonth.value = _currentMonth.value.minusMonths(1)
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            dao.deleteAllLogs()
+        }
     }
 }

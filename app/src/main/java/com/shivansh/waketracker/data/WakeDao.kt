@@ -21,4 +21,7 @@ interface WakeDao {
     // --- NEW METHOD FOR BACKGROUND NOTIFICATIONS ---
     @Query("SELECT * FROM wake_logs")
     suspend fun getAllLogsSnapshot(): List<WakeLog>
+
+    @Query("DELETE FROM wake_logs")
+    suspend fun deleteAllLogs()
 }
