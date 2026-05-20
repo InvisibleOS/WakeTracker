@@ -10,18 +10,9 @@ import java.util.Calendar
 object ReminderScheduler {
     fun scheduleReminder(context: Context, targetHour: Int, targetMinute: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                // If we don't have permission, we can't schedule the exact alarm.
-                // The app should prompt for this on startup.
-                return
-            }
-        }
 
-        val intent = Intent(context, WakeReminderService::class.java)
-        // Use a Foreground Service for API 36 since we need to show the rich notification
-        val pendingIntent = PendingIntent.getForegroundService(
+        val intent = Intent(context, WakeReminderReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
             context,
             0,
             intent,
@@ -53,8 +44,8 @@ object ReminderScheduler {
 
     fun cancelReminder(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, WakeReminderService::class.java)
-        val pendingIntent = PendingIntent.getForegroundService(
+        val intent = Intent(context, WakeReminderReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
             context,
             0,
             intent,
