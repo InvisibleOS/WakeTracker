@@ -6,6 +6,9 @@
     <uses-feature android:name="android.hardware.nfc" android:required="true" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
         <application
         android:allowBackup="true"
@@ -52,6 +55,13 @@
                     <data android:scheme="waketracker" android:host="scan" />
                 </intent-filter>
             </activity>
+
+            <service
+                android:name=".WakeReminderService"
+                android:exported="false"
+                android:foregroundServiceType="specialUse">
+                <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Ongoing reminder for wake time" />
+            </service>
 
     </application>
 </manifest>

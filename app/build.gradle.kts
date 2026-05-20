@@ -7,15 +7,15 @@ plugins {
 
 android {
     namespace = "com.shivansh.waketracker"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.shivansh.waketracker"
-        minSdk = 34
-        targetSdk = 35
+        minSdk = 36
+        targetSdk = 36
 
-        versionCode = 4
-        versionName = "1.3.1"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
