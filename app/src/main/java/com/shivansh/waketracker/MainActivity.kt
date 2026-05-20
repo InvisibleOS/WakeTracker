@@ -12,11 +12,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,6 +34,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
@@ -102,6 +108,11 @@ class MainActivity : ComponentActivity() {
                             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     }
+                    viewModel.scheduleReminders(
+                        context,
+                        sharedPrefs.getInt("target_hour", 8),
+                        sharedPrefs.getInt("target_minute", 0)
+                    )
                 }
 
                 var currentTab by remember { mutableStateOf(AppTab.TRACKER) }
@@ -125,19 +136,22 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     bottomBar = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 28.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(36.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                shadowElevation = 12.dp,
-                                modifier = Modifier.height(72.dp).wrapContentWidth()
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                shadowElevation = 4.dp
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp).fillMaxHeight(),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     NavBarItem(
@@ -160,7 +174,7 @@ class MainActivity : ComponentActivity() {
                     Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
                         when (currentTab) {
                             AppTab.TRACKER -> WakeTrackerScreen(viewModel, sharedPrefs)
-                            AppTab.SETTINGS -> SettingsScreen(viewModel, sharedPrefs)
+                            AppTab.SETTINGS -> SettingsScreen(sharedPrefs, viewModel)
                         }
                     }
                 }
@@ -171,32 +185,37 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: () -> Unit) {
-    val containerColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, label = "")
-    val contentColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
-    val fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold
+    val containerColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent, animationSpec = tween(250), label = "")
+    val contentColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, animationSpec = tween(250), label = "")
 
     Row(
         modifier = Modifier
-            .height(52.dp)
-            .clip(RoundedCornerShape(26.dp))
+            .height(48.dp)
+            .clip(CircleShape)
             .background(containerColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp)
-            .animateContentSize(animationSpec = tween(400, easing = FastOutSlowInEasing)),
+            .padding(horizontal = if (isSelected) 20.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        if (isSelected) {
-            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(10.dp))
+        Icon(icon, contentDescription = if (!isSelected) label else null, tint = contentColor, modifier = Modifier.size(24.dp))
+        
+        AnimatedVisibility(
+            visible = isSelected,
+            enter = expandHorizontally(animationSpec = tween(250)) + fadeIn(animationSpec = tween(250)),
+            exit = shrinkHorizontally(animationSpec = tween(250)) + fadeOut(animationSpec = tween(250))
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.sp
+                )
+            }
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            color = contentColor,
-            fontWeight = fontWeight,
-            letterSpacing = 0.5.sp
-        )
     }
 }
 
@@ -253,17 +272,66 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = selectedView == ConsistencyView.MONTHLY,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val isMonthly = selectedView == ConsistencyView.MONTHLY
+            
+            val monthlyInteractionSource = remember { MutableInteractionSource() }
+            val monthlyIsPressed by monthlyInteractionSource.collectIsPressedAsState()
+            val monthlyScale by animateFloatAsState(
+                targetValue = if (monthlyIsPressed) 0.94f else 1f,
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow), label = ""
+            )
+            val monthlyWeight by animateFloatAsState(if (isMonthly) 1.25f else 1f, animationSpec = tween(300, easing = FastOutSlowInEasing), label = "")
+            val monthlyColor by animateColorAsState(if (isMonthly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), animationSpec = tween(300), label = "")
+            val monthlyTextColor by animateColorAsState(if (isMonthly) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, animationSpec = tween(300), label = "")
+            val monthlyEndCorner by androidx.compose.animation.core.animateDpAsState(if (isMonthly) 24.dp else 6.dp, animationSpec = tween(300, easing = FastOutSlowInEasing), label = "")
+
+            val yearlyInteractionSource = remember { MutableInteractionSource() }
+            val yearlyIsPressed by yearlyInteractionSource.collectIsPressedAsState()
+            val yearlyScale by animateFloatAsState(
+                targetValue = if (yearlyIsPressed) 0.94f else 1f,
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy, stiffness = androidx.compose.animation.core.Spring.StiffnessLow), label = ""
+            )
+            val yearlyWeight by animateFloatAsState(if (!isMonthly) 1.25f else 1f, animationSpec = tween(300, easing = FastOutSlowInEasing), label = "")
+            val yearlyColor by animateColorAsState(if (!isMonthly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), animationSpec = tween(300), label = "")
+            val yearlyTextColor by animateColorAsState(if (!isMonthly) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, animationSpec = tween(300), label = "")
+            val yearlyStartCorner by androidx.compose.animation.core.animateDpAsState(if (!isMonthly) 24.dp else 6.dp, animationSpec = tween(300, easing = FastOutSlowInEasing), label = "")
+
+            Surface(
+                modifier = Modifier
+                    .weight(monthlyWeight)
+                    .height(48.dp)
+                    .scale(monthlyScale),
+                shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = monthlyEndCorner, bottomEnd = monthlyEndCorner),
+                color = monthlyColor,
+                contentColor = monthlyTextColor,
                 onClick = { selectedView = ConsistencyView.MONTHLY },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-            ) { Text(text = "Monthly", fontWeight = FontWeight.Bold) }
-            SegmentedButton(
-                selected = selectedView == ConsistencyView.YEARLY,
+                interactionSource = monthlyInteractionSource
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("Monthly", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .weight(yearlyWeight)
+                    .height(48.dp)
+                    .scale(yearlyScale),
+                shape = RoundedCornerShape(topStart = yearlyStartCorner, bottomStart = yearlyStartCorner, topEnd = 24.dp, bottomEnd = 24.dp),
+                color = yearlyColor,
+                contentColor = yearlyTextColor,
                 onClick = { selectedView = ConsistencyView.YEARLY },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-            ) { Text(text = "Yearly", fontWeight = FontWeight.Bold) }
+                interactionSource = yearlyInteractionSource
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("Yearly", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -331,9 +399,9 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) {
+fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel) {
     var showTimePicker by remember { mutableStateOf(false) }
-    var showClearConfirm by remember { mutableStateOf(false) }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
     var targetHour by remember { mutableIntStateOf(sharedPrefs.getInt("target_hour", 8)) }
     var targetMinute by remember { mutableIntStateOf(sharedPrefs.getInt("target_minute", 0)) }
 
@@ -351,49 +419,53 @@ fun SettingsScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = { showClearConfirm = true },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
-            ),
+        OutlinedButton(
+            onClick = { showClearConfirmDialog = true },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            contentPadding = PaddingValues(16.dp)
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
         ) {
-            Text("Clear All Data \uD83D\uDDD1\uFE0F", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Icon(Icons.Default.Warning, contentDescription = "Warning", modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Clear All Data", fontWeight = FontWeight.Bold)
         }
     }
 
-    if (showTimePicker) {
-        val state = rememberTimePickerState(initialHour = targetHour, initialMinute = targetMinute)
-        AlertDialog(onDismissRequest = { showTimePicker = false },
-            confirmButton = { TextButton(onClick = { targetHour = state.hour; targetMinute = state.minute; sharedPrefs.edit().putInt("target_hour", targetHour).putInt("target_minute", targetMinute).apply(); showTimePicker = false }) { Text(text = "Confirm") } },
-            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(text = "Cancel") } },
-            text = { TimePicker(state = state) }
-        )
-    }
-
-    if (showClearConfirm) {
+    if (showClearConfirmDialog) {
         AlertDialog(
-            onDismissRequest = { showClearConfirm = false },
-            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            onDismissRequest = { showClearConfirmDialog = false },
             title = { Text("Are you sure?") },
-            text = { Text("This will permanently delete all your wake records. This action cannot be undone.") },
+            text = { Text("This will permanently clear all your wake records. This action cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.clearAllData()
-                        showClearConfirm = false
+                        showClearConfirmDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Clear Records", fontWeight = FontWeight.Bold) }
+                ) { Text(text = "Yes, Clear It") }
             },
             dismissButton = {
-                TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearConfirmDialog = false }) { Text(text = "Cancel") }
             }
+        )
+    }
+
+    if (showTimePicker) {
+        val state = rememberTimePickerState(initialHour = targetHour, initialMinute = targetMinute)
+        val context = LocalContext.current
+        AlertDialog(onDismissRequest = { showTimePicker = false },
+            confirmButton = { TextButton(onClick = { 
+                targetHour = state.hour
+                targetMinute = state.minute
+                sharedPrefs.edit().putInt("target_hour", targetHour).putInt("target_minute", targetMinute).apply()
+                viewModel.scheduleReminders(context, targetHour, targetMinute)
+                showTimePicker = false 
+            }) { Text(text = "Confirm") } },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(text = "Cancel") } },
+            text = { TimePicker(state = state) }
         )
     }
 }

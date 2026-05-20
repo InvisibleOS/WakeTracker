@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.shivansh.waketracker"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.shivansh.waketracker"
-        minSdk = 34
-        targetSdk = 35
+        minSdk = 36
+        targetSdk = 36
 
         versionCode = 8
         versionName = "1.4.3"
