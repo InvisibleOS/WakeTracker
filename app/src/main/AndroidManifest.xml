@@ -56,7 +56,12 @@
                 </intent-filter>
             </activity>
 
-            <receiver android:name=".WakeReminderReceiver" android:exported="false" />
+            <service
+                android:name=".WakeReminderService"
+                android:exported="false"
+                android:foregroundServiceType="specialUse">
+                <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Ongoing reminder for wake time" />
+            </service>
 
     </application>
 </manifest>

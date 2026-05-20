@@ -11,8 +11,8 @@ object ReminderScheduler {
     fun scheduleReminder(context: Context, targetHour: Int, targetMinute: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val intent = Intent(context, WakeReminderReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
+        val intent = Intent(context, WakeReminderService::class.java)
+        val pendingIntent = PendingIntent.getForegroundService(
             context,
             0,
             intent,
@@ -44,8 +44,8 @@ object ReminderScheduler {
 
     fun cancelReminder(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, WakeReminderReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
+        val intent = Intent(context, WakeReminderService::class.java)
+        val pendingIntent = PendingIntent.getForegroundService(
             context,
             0,
             intent,

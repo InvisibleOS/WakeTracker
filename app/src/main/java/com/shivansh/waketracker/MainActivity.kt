@@ -192,17 +192,17 @@ fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: (
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(22.dp))
         if (isSelected) {
+            Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(22.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = contentColor,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.4.sp
-            )
         }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = contentColor,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.4.sp
+        )
     }
 }
 
