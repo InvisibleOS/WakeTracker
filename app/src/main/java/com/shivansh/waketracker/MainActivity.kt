@@ -130,14 +130,14 @@ class MainActivity : ComponentActivity() {
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(32.dp),
+                                shape = RoundedCornerShape(36.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
-                                shadowElevation = 8.dp,
-                                modifier = Modifier.height(64.dp).wrapContentWidth()
+                                shadowElevation = 12.dp,
+                                modifier = Modifier.height(72.dp).wrapContentWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp).fillMaxHeight(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp).fillMaxHeight(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     NavBarItem(
@@ -171,31 +171,32 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: () -> Unit) {
-    val containerColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, label = "")
-    val contentColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
+    val containerColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent, label = "")
+    val contentColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, label = "")
+    val fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold
 
     Row(
         modifier = Modifier
-            .height(48.dp)
-            .clip(CircleShape)
+            .height(52.dp)
+            .clip(RoundedCornerShape(26.dp))
             .background(containerColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp)
-            .animateContentSize(),
+            .padding(horizontal = 24.dp)
+            .animateContentSize(animationSpec = tween(400, easing = FastOutSlowInEasing)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(22.dp))
         if (isSelected) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = contentColor,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.4.sp
-            )
+            Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(10.dp))
         }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            color = contentColor,
+            fontWeight = fontWeight,
+            letterSpacing = 0.5.sp
+        )
     }
 }
 
