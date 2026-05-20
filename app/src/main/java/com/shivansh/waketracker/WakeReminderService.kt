@@ -31,9 +31,13 @@ class WakeReminderService : Service() {
 
         if (Build.VERSION.SDK_INT >= 36) {
             try {
-                val progressStyle = Notification.ProgressStyle()
-                builder.setStyle(progressStyle)
-            } catch (e: Exception) {}
+                // Use reflection since we reverted compileSdk to 35 for compatibility
+                val progressStyleClass = Class.forName("android.app.Notification\$ProgressStyle")
+                val progressStyleObj = progressStyleClass.getDeclaredConstructor().newInstance() as Notification.Style
+                builder.setStyle(progressStyleObj)
+            } catch (e: Exception) {
+                // Fallback if ProgressStyle is not available
+            }
         }
 
         if (Build.VERSION.SDK_INT >= 34) {
