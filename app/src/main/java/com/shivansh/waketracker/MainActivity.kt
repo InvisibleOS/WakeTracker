@@ -102,13 +102,6 @@ class MainActivity : ComponentActivity() {
                             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     }
-                    
-                    // Schedule initial reminder on startup
-                    ReminderScheduler.scheduleReminder(
-                        context, 
-                        sharedPrefs.getInt("target_hour", 8), 
-                        sharedPrefs.getInt("target_minute", 0)
-                    )
                 }
 
                 var currentTab by remember { mutableStateOf(AppTab.TRACKER) }
@@ -192,17 +185,17 @@ fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: (
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
+        Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(22.dp))
         if (isSelected) {
-            Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(22.dp))
             Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.4.sp
+            )
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = contentColor,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 0.4.sp
-        )
     }
 }
 
@@ -375,20 +368,8 @@ fun SettingsScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) {
 
     if (showTimePicker) {
         val state = rememberTimePickerState(initialHour = targetHour, initialMinute = targetMinute)
-        val context = LocalContext.current
         AlertDialog(onDismissRequest = { showTimePicker = false },
-            confirmButton = { 
-                TextButton(onClick = { 
-                    targetHour = state.hour
-                    targetMinute = state.minute
-                    sharedPrefs.edit().putInt("target_hour", targetHour).putInt("target_minute", targetMinute).apply()
-                    
-                    // Reschedule the live notification for the new time
-                    ReminderScheduler.scheduleReminder(context, targetHour, targetMinute)
-                    
-                    showTimePicker = false 
-                }) { Text(text = "Confirm") } 
-            },
+            confirmButton = { TextButton(onClick = { targetHour = state.hour; targetMinute = state.minute; sharedPrefs.edit().putInt("target_hour", targetHour).putInt("target_minute", targetMinute).apply(); showTimePicker = false }) { Text(text = "Confirm") } },
             dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(text = "Cancel") } },
             text = { TimePicker(state = state) }
         )
