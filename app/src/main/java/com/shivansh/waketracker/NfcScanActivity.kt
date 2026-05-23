@@ -38,6 +38,14 @@ class NfcScanActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val sharedPrefs = getSharedPreferences("WakeTrackerPrefs", Context.MODE_PRIVATE)
+        
+        // Skip logging if we are currently provisioning a tag
+        if (sharedPrefs.getBoolean("is_provisioning", false)) {
+            finish()
+            closeTransition()
+            return
+        }
+
         val intentData = intent?.data
 
         if (intentData?.scheme == "waketracker" && intentData.host == "scan") {
@@ -74,17 +82,24 @@ class NfcScanActivity : ComponentActivity() {
         val now = LocalTime.now()
         val targetTime = LocalTime.of(targetHour, targetMinute)
 
-        val status = if (now.isBefore(targetTime) || now == targetTime) WakeStatus.ON_TIME else WakeStatus.LATE
         val dao = WakeDatabase.getDatabase(this).wakeDao()
 
         val existingLog = dao.getLogByDate(today.toString())
+        val status = if (now.isBefore(targetTime) || now == targetTime) WakeStatus.ON_TIME else WakeStatus.LATE
+        
         if (existingLog == null) {
             dao.insertLog(WakeLog(dateStr = today.toString(), targetTimeMs = 0L, actualScanTimeMs = scanTimeMs, status = status))
         }
 
         val allLogs = dao.getAllLogsSnapshot()
         val currentMonth = YearMonth.of(today.year, today.monthValue)
-        val logsForMonth = allLogs.filter { LocalDate.parse(it.dateStr).monthValue == currentMonth.monthValue }
+        val logsForMonth = allLogs.filter { 
+            try {
+                LocalDate.parse(it.dateStr).monthValue == currentMonth.monthValue 
+            } catch (e: Exception) {
+                false
+            }
+        }
 
         val onTimeCount = logsForMonth.count { it.status == WakeStatus.ON_TIME }
         val daysDivider = today.dayOfMonth
@@ -92,7 +107,11 @@ class NfcScanActivity : ComponentActivity() {
         val consistencyFraction = if (daysDivider > 0) onTimeCount.toFloat() / daysDivider else 0f
         val consistencyPercentage = (consistencyFraction * 100).toInt()
 
-        postSuccessNotification(status, scanTimeMs, consistencyPercentage)
+        // Use the actual scan time from the log if it already existed
+        val finalScanTimeMs = existingLog?.actualScanTimeMs ?: scanTimeMs
+        val finalStatus = existingLog?.status ?: status
+
+        postSuccessNotification(finalStatus, finalScanTimeMs, consistencyPercentage)
     }
 
     private fun postSuccessNotification(status: WakeStatus, scanTimeMs: Long, consistency: Int) {
@@ -118,16 +137,19 @@ class NfcScanActivity : ComponentActivity() {
         )
 
         val timeFormatted = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(scanTimeMs))
+        val statusText = if (status == WakeStatus.ON_TIME) "On Time" else "Late"
 
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Wake up logged")
+            .setContentTitle("Wake up logged: $statusText")
             .setContentText("Woke up at $timeFormatted")
+            .setSubText("Monthly Consistency: $consistency%")
             .setProgress(100, consistency, false)
-            // .setColor() is intentionally removed here so the system handles the tint!
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         notificationManager.notify(todayNotificationId(), builder.build())
     }

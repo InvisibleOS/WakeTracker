@@ -5,10 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WakeLog::class], version = 1, exportSchema = false)
+@Database(entities = [WakeLog::class, NfcTag::class], version = 2, exportSchema = false)
 abstract class WakeDatabase : RoomDatabase() {
 
     abstract fun wakeDao(): WakeDao
+    abstract fun nfcTagDao(): NfcTagDao
 
     companion object {
         @Volatile
@@ -20,7 +21,7 @@ abstract class WakeDatabase : RoomDatabase() {
                     context.applicationContext,
                     WakeDatabase::class.java,
                     "wake_tracker_db"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }
