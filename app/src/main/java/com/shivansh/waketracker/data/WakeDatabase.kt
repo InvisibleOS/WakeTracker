@@ -5,11 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WakeLog::class, NfcTag::class], version = 2, exportSchema = false)
+@Database(entities = [WakeLog::class], version = 2, exportSchema = false)
 abstract class WakeDatabase : RoomDatabase() {
 
     abstract fun wakeDao(): WakeDao
-    abstract fun nfcTagDao(): NfcTagDao
 
     companion object {
         @Volatile

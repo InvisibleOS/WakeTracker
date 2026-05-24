@@ -26,21 +26,21 @@ class NfcProvisioningViewModel(application: Application) : AndroidViewModel(appl
 
     fun reset() {
         uiState = NfcProvisioningState.SCANNING
-        setProvisioningFlag(true)
+        setSetupFlag(true)
     }
 
     fun retry() {
         uiState = NfcProvisioningState.SCANNING
-        setProvisioningFlag(true)
+        setSetupFlag(true)
     }
 
     fun onDismissed() {
-        setProvisioningFlag(false)
+        setSetupFlag(false)
     }
 
-    private fun setProvisioningFlag(isProvisioning: Boolean) {
+    private fun setSetupFlag(isSettingUp: Boolean) {
         getApplication<Application>().getSharedPreferences("WakeTrackerPrefs", Context.MODE_PRIVATE)
-            .edit().putBoolean("is_provisioning", isProvisioning).apply()
+            .edit().putBoolean("is_setting_up_tag", isSettingUp).apply()
     }
     
     fun onTagDiscovered(tag: Tag) {

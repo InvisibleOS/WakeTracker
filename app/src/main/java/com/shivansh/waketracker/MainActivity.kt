@@ -99,8 +99,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         sharedPrefs = getSharedPreferences("WakeTrackerPrefs", MODE_PRIVATE)
-        // Reset provisioning flag in case it was left stale
-        sharedPrefs.edit().putBoolean("is_provisioning", false).apply()
 
         setContent {
             WakeTrackerTheme {
@@ -117,11 +115,6 @@ class MainActivity : ComponentActivity() {
                             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     }
-                    viewModel.scheduleReminders(
-                        context,
-                        sharedPrefs.getInt("target_hour", 8),
-                        sharedPrefs.getInt("target_minute", 0)
-                    )
                 }
 
                 var currentTab by remember { mutableStateOf(AppTab.TRACKER) }
@@ -652,7 +645,6 @@ fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel, buf
                 targetHour = state.hour
                 targetMinute = state.minute
                 sharedPrefs.edit().putInt("target_hour", targetHour).putInt("target_minute", targetMinute).apply()
-                viewModel.scheduleReminders(context, targetHour, targetMinute)
                 showTimePicker = false 
             }) { Text(text = "Confirm") } },
             dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(text = "Cancel") } },

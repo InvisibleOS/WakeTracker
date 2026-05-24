@@ -39,14 +39,6 @@ class NfcScanActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val sharedPrefs = getSharedPreferences("WakeTrackerPrefs", Context.MODE_PRIVATE)
-        
-        // Skip logging if we are currently provisioning a tag
-        if (sharedPrefs.getBoolean("is_provisioning", false)) {
-            finish()
-            closeTransition()
-            return
-        }
-
         val intentData = intent?.data
 
         if (intentData?.scheme == "waketracker" && intentData.host == "scan") {
@@ -145,19 +137,24 @@ class NfcScanActivity : ComponentActivity() {
         )
 
         val timeFormatted = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(scanTimeMs))
-        val statusText = if (status == WakeStatus.ON_TIME) "On Time" else "Late"
 
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Wake up logged: $statusText")
-            .setContentText("Woke up at $timeFormatted")
-            .setSubText("Monthly Consistency: $consistency%")
-            .setProgress(100, consistency, false)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+        if (status == WakeStatus.ON_TIME) {
+            builder.setContentTitle("On Time • $timeFormatted")
+                .setContentText("Monthly Consistency: $consistency%")
+        } else {
+            builder.setContentTitle("Late • $timeFormatted")
+                .setContentText("Late scan. Let's get back on track tomorrow!")
+                .setSubText("Consistency: $consistency%")
+                .setProgress(100, consistency, false)
+        }
 
         notificationManager.notify(todayNotificationId(), builder.build())
     }

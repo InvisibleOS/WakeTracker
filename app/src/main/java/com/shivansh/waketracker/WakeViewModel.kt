@@ -17,10 +17,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import java.util.Calendar
 
 class WakeViewModel(application: Application) : AndroidViewModel(application) {
@@ -79,69 +76,6 @@ class WakeViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAllData() {
         viewModelScope.launch {
             dao.deleteAllLogs()
-        }
-    }
-
-    fun scheduleReminders(context: Context, targetHour: Int, targetMinute: Int) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = System.currentTimeMillis()
-            set(Calendar.HOUR_OF_DAY, targetHour)
-            set(Calendar.MINUTE, targetMinute)
-            set(Calendar.SECOND, 0)
-            
-            // If the time has already passed today, target is for tomorrow
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
-        }
-        
-        val targetTimeMs = calendar.timeInMillis
-        val liveUpdateTimeMs = targetTimeMs - (30 * 60 * 1000)
-
-        // Intent for Live Update
-        val liveUpdateIntent = Intent(context, ReminderReceiver::class.java).apply {
-            action = ReminderReceiver.ACTION_SHOW_LIVE_UPDATE
-            putExtra(ReminderReceiver.EXTRA_TARGET_TIME_MS, targetTimeMs)
-        }
-        val liveUpdatePendingIntent = PendingIntent.getBroadcast(
-            context,
-            1,
-            liveUpdateIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        // Intent for Missed Scan
-        val missedScanIntent = Intent(context, ReminderReceiver::class.java).apply {
-            action = ReminderReceiver.ACTION_SHOW_MISSED
-        }
-        val missedScanPendingIntent = PendingIntent.getBroadcast(
-            context,
-            2,
-            missedScanIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        // Cancel previous alarms
-        alarmManager.cancel(liveUpdatePendingIntent)
-        alarmManager.cancel(missedScanPendingIntent)
-
-        try {
-            // Schedule new alarms
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                liveUpdateTimeMs,
-                liveUpdatePendingIntent
-            )
-            
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                targetTimeMs,
-                missedScanPendingIntent
-            )
-        } catch (e: SecurityException) {
-            // Ignore if exact alarm permission is denied
         }
     }
 }
