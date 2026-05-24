@@ -37,9 +37,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import com.shivansh.waketracker.data.BufferTimePreferences
 import com.shivansh.waketracker.ui.NfcProvisioningSheet
+import com.shivansh.waketracker.ui.WakeGreen
+import com.shivansh.waketracker.ui.WakeRed
+import com.shivansh.waketracker.ui.calculateWakeDotColor
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,10 +71,12 @@ import androidx.core.content.ContextCompat
 import com.shivansh.waketracker.data.WakeStatus
 import com.shivansh.waketracker.ui.theme.WakeTrackerTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
@@ -97,6 +104,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WakeTrackerTheme {
+                val bufferTimeMinutes by BufferTimePreferences
+                    .getBufferTimeMinutes(LocalContext.current)
+                    .collectAsState(initial = BufferTimePreferences.DEFAULT_BUFFER_MINUTES)
                 // Request Notification Permission on Startup for Android 13+
                 val context = LocalContext.current
                 val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -175,8 +185,8 @@ class MainActivity : ComponentActivity() {
                         contentAlignment = Alignment.TopCenter
                     ) {
                         when (currentTab) {
-                            AppTab.TRACKER -> WakeTrackerScreen(viewModel, sharedPrefs)
-                            AppTab.SETTINGS -> SettingsScreen(sharedPrefs, viewModel)
+                            AppTab.TRACKER -> WakeTrackerScreen(viewModel, sharedPrefs, bufferTimeMinutes)
+                            AppTab.SETTINGS -> SettingsScreen(sharedPrefs, viewModel, bufferTimeMinutes)
                         }
                     }
                 }
@@ -223,7 +233,7 @@ fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: (
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) {
+fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences, bufferTimeMinutes: Int) {
     val logs by viewModel.monthlyLogs.collectAsState()
     val pagerState = rememberPagerState(initialPage = LocalDate.now().monthValue - 1, pageCount = { 12 })
     val visibleMonth = remember(pagerState.currentPage) { YearMonth.of(LocalDate.now().year, pagerState.currentPage + 1) }
@@ -246,7 +256,9 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
 
     val targetFraction = if (selectedView == ConsistencyView.YEARLY) yearlyFraction else monthlyFraction
     val animatedFraction by animateFloatAsState(targetValue = targetFraction, animationSpec = tween(800, easing = FastOutSlowInEasing), label = "")
-    val consistencyColor by animateColorAsState(targetValue = lerp(Color(0xFFF44336), Color(0xFF4CAF50), animatedFraction), animationSpec = tween(600), label = "")
+    val consistencyColor by animateColorAsState(targetValue = lerp(WakeRed, WakeGreen, animatedFraction), animationSpec = tween(600), label = "")
+
+    val bufferDurationMs = bufferTimeMinutes.toLong() * 60_000L
 
     Column(
         modifier = Modifier
@@ -366,7 +378,20 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
                     val date = pageMonth.atDay(i + 1)
                     val log = logs.find { it.dateStr == date.toString() }
                     val status = if (date.isAfter(today)) WakeStatus.FUTURE else if (date == today) (log?.status ?: if (currentTime.isAfter(LocalTime.of(sharedPrefs.getInt("target_hour", 8), 0))) WakeStatus.MISSED else WakeStatus.FUTURE) else log?.status ?: WakeStatus.MISSED
-                    DotItem(status, onClick = { if (!date.isAfter(today)) { selectedDate = date; showBottomSheet = true } })
+
+                    // Compute gradient color for LATE dots; ON_TIME/MISSED/FUTURE use canonical colors
+                    val dotColor = when {
+                        status == WakeStatus.FUTURE -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                        log != null && log.targetTimeMs > 0L -> calculateWakeDotColor(
+                            targetTimeMs = log.targetTimeMs,
+                            actualScanTimeMs = log.actualScanTimeMs,
+                            bufferDurationMs = bufferDurationMs
+                        )
+                        status == WakeStatus.ON_TIME -> WakeGreen
+                        else -> WakeRed // MISSED or legacy log with targetTimeMs == 0
+                    }
+
+                    DotItem(status = status, dotColor = dotColor, onClick = { if (!date.isAfter(today)) { selectedDate = date; showBottomSheet = true } })
                 }
             }
         }
@@ -379,6 +404,18 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
             if (currentTime.isAfter(targetTime)) WakeStatus.MISSED else WakeStatus.FUTURE
         } else {
             log?.status ?: WakeStatus.MISSED
+        }
+
+        // Compute the gradient-aware color for the bottom sheet indicator
+        val sheetIndicatorColor = when {
+            status == WakeStatus.FUTURE -> MaterialTheme.colorScheme.surfaceVariant
+            log != null && log.targetTimeMs > 0L -> calculateWakeDotColor(
+                targetTimeMs = log.targetTimeMs,
+                actualScanTimeMs = log.actualScanTimeMs,
+                bufferDurationMs = bufferDurationMs
+            )
+            status == WakeStatus.ON_TIME -> WakeGreen
+            else -> WakeRed
         }
 
         ModalBottomSheet(
@@ -398,14 +435,7 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
                     modifier = Modifier
                         .size(88.dp)
                         .clip(CookieShape())
-                        .background(
-                            when (status) {
-                                WakeStatus.ON_TIME -> Color(0xFF1B5E20)
-                                WakeStatus.LATE -> Color(0xFFE65100)
-                                WakeStatus.FUTURE -> MaterialTheme.colorScheme.surfaceVariant
-                                else -> Color(0xFFB71C1C)
-                            }
-                        ),
+                        .background(sheetIndicatorColor),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -476,7 +506,7 @@ fun WakeTrackerScreen(viewModel: WakeViewModel, sharedPrefs: SharedPreferences) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel) {
+fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel, bufferTimeMinutes: Int) {
     var showTimePicker by remember { mutableStateOf(false) }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
     var showNfcProvisioningSheet by remember { mutableStateOf(false) }
@@ -484,6 +514,8 @@ fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel) {
     var targetMinute by remember { mutableIntStateOf(sharedPrefs.getInt("target_minute", 0)) }
     
     val nfcProvisioningViewModel: NfcProvisioningViewModel = viewModel()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -502,6 +534,56 @@ fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel) {
                     Text("Scan NFC before this time", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                 }
                 Text(LocalTime.of(targetHour, targetMinute).format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a")), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // --- Buffer Time Selector ---
+        Card(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Buffer Time", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Grace period before a late scan counts as missed",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                    Icon(Icons.Default.Timer, contentDescription = "Buffer Time", tint = MaterialTheme.colorScheme.primary)
+                }
+
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    BufferTimePreferences.PRESET_OPTIONS.forEachIndexed { index, minutes ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = BufferTimePreferences.PRESET_OPTIONS.size
+                            ),
+                            onClick = {
+                                scope.launch {
+                                    BufferTimePreferences.setBufferTimeMinutes(context, minutes)
+                                }
+                            },
+                            selected = bufferTimeMinutes == minutes
+                        ) {
+                            Text(
+                                text = if (minutes < 60) "${minutes}m" else "${minutes / 60}h",
+                                fontWeight = if (bufferTimeMinutes == minutes) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -580,18 +662,13 @@ fun SettingsScreen(sharedPrefs: SharedPreferences, viewModel: WakeViewModel) {
 }
 
 @Composable
-fun DotItem(status: WakeStatus, onClick: () -> Unit) {
+fun DotItem(status: WakeStatus, dotColor: Color, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(targetValue = if (isPressed) 0.88f else 1f, label = "scale")
 
-    val (color, isSolid) = when (status) {
-        WakeStatus.ON_TIME -> Color(0xFF4CAF50) to true
-        WakeStatus.LATE -> Color(0xFFFB8C00) to true
-        WakeStatus.MISSED -> Color(0xFFF44336) to true
-        WakeStatus.FUTURE -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) to false
-    }
+    val isSolid = status != WakeStatus.FUTURE
 
     Box(
         modifier = Modifier
@@ -606,8 +683,8 @@ fun DotItem(status: WakeStatus, onClick: () -> Unit) {
             interactionSource = interactionSource,
             modifier = Modifier.fillMaxSize(),
             shape = CircleShape,
-            color = if (isSolid) color else Color.Transparent,
-            border = if (isSolid) null else androidx.compose.foundation.BorderStroke(2.dp, color.copy(alpha = 0.4f))
+            color = if (isSolid) dotColor else Color.Transparent,
+            border = if (isSolid) null else androidx.compose.foundation.BorderStroke(2.dp, dotColor.copy(alpha = 0.4f))
         ) {}
     }
 }

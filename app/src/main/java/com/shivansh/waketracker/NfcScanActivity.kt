@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
@@ -82,13 +83,20 @@ class NfcScanActivity : ComponentActivity() {
         val now = LocalTime.now()
         val targetTime = LocalTime.of(targetHour, targetMinute)
 
+        // Compute epoch millis for today's target wake time (needed for gradient math)
+        val targetTimeMs = today
+            .atTime(targetHour, targetMinute)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
         val dao = WakeDatabase.getDatabase(this).wakeDao()
 
         val existingLog = dao.getLogByDate(today.toString())
         val status = if (now.isBefore(targetTime) || now == targetTime) WakeStatus.ON_TIME else WakeStatus.LATE
         
         if (existingLog == null) {
-            dao.insertLog(WakeLog(dateStr = today.toString(), targetTimeMs = 0L, actualScanTimeMs = scanTimeMs, status = status))
+            dao.insertLog(WakeLog(dateStr = today.toString(), targetTimeMs = targetTimeMs, actualScanTimeMs = scanTimeMs, status = status))
         }
 
         val allLogs = dao.getAllLogsSnapshot()
