@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WakeLog::class], version = 2, exportSchema = false)
+@Database(entities = [WakeLog::class], version = 3, exportSchema = false)
 abstract class WakeDatabase : RoomDatabase() {
 
     abstract fun wakeDao(): WakeDao
@@ -20,7 +20,7 @@ abstract class WakeDatabase : RoomDatabase() {
                     context.applicationContext,
                     WakeDatabase::class.java,
                     "wake_tracker_db"
-                ).fallbackToDestructiveMigration().build()
+                ).fallbackToDestructiveMigration(true).build()
                 INSTANCE = instance
                 instance
             }
