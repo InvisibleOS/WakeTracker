@@ -1,54 +1,55 @@
 # WakeTracker
 
-WakeTracker is a strict, physically engaging Android alarm clock designed to make sure you actually get out of bed. Instead of letting you blindly tap a "snooze" button from under the covers, WakeTracker requires you to physically get up and scan a designated NFC tag to silence the alarm.
+**Engineered for Consistent Waking.**
 
-## Hardware Requirement: NFC Tag
-To use this app as intended, **you must have a physical NFC tag**. 
+Traditional alarms rely heavily on willpower, allowing individuals to fall back into sleep cycles through continuous "snoozing." WakeTracker fundamentally disrupts this pattern. It is a strict, physically engaging Android alarm application designed for professionals and individuals seeking to establish a rigorous, highly consistent morning routine.
 
-For the app to recognize the tag and dismiss the alarm, the tag must be programmed with the specific URI configured for this app (e.g., `waketracker://dismiss`). 
+### How It Operates
 
-*Tip: Stick this NFC tag somewhere far from your bed—like the bathroom mirror or near the coffee maker—so you are forced to start your day to turn the alarm off.*
+Rather than permitting dismissal from the comfort of a bed, WakeTracker forces physical relocation. To silence the active alarm, users are required to physically leave their sleeping environment and scan a designated, pre-programmed NFC tag. 
 
-## Installation
+*Recommendation: Place the NFC tag in a bathroom or kitchen to guarantee physical separation from the bed before the alarm can be disabled.*
 
-WakeTracker is distributed directly via GitHub. The easiest way to install it and automatically receive future updates is by using an app manager like [Obtainium](https://github.com/ImranR98/Obtainium).
+### Essential Features
 
-### Option 1: Install via Obtainium (Recommended)
-1. Download and install **Obtainium** on your Android device.
-2. Open Obtainium and tap **Add App**.
-3. Paste the URL of this repository: `https://github.com/InvisibleOS/WakeTracker`
-4. Tap **Add** and then **Install**. 
-5. Obtainium will automatically download the latest secure release and notify you whenever a new version is available.
+- **Zero-Tolerance Snooze Policy:** Standard software dismissal options are entirely disabled. The alarm can only be deactivated through physical hardware interaction.
+- **Hardware-Enforced Waking:** Utilizes Near-Field Communication (NFC) technology to demand active, external engagement from the user.
+- **Circadian Rhythm Correction:** By enforcing a strict wake-up routine, the application aids in establishing long-term consistency, which is critical for circadian rhythm stabilization.
+- **Productivity & Consistency Tracking:** Monitors and visualizes your daily wake-up success rate. By showing how consistently you get out of bed on or before your scheduled time, the application encourages habit transformation, measures your progress, and ultimately boosts overall productivity.
+- **Streamlined UX:** Features an efficient, distraction-free interface built upon Google's Material 3 design language.
 
-### Option 2: Direct APK Download
-1. Navigate to the **[Releases](../../releases)** section on the right side of this GitHub page.
-2. Click on the latest release tag (e.g., `v1.2`).
-3. Scroll down to the **Assets** dropdown.
-4. Download the `app-release.apk` file directly to your phone.
-5. Tap the downloaded file to install it. *(Note: You may need to grant your browser permission to "Install unknown apps" in your Android settings).*
+---
 
-## Setup & Usage
-1. **Program your Tag:** Use a free NFC writing app (like *NFC Tools*) to write the required WakeTracker URI to your physical NFC tag.
-2. **Set the Alarm:** Open WakeTracker, grant any necessary notification permissions, and set your wake-up time.
-3. **Wake Up:** When the alarm triggers, the standard dismissal methods are disabled.
-4. **Scan to Stop:** Get out of bed, walk to your NFC tag, and tap the back of your phone against it to successfully dismiss the alarm.
+### Installation & Deployment
 
-## Tech Stack & Architecture
+WakeTracker is open-source, privacy-focused, and exclusively available via GitHub.
 
-- **Language:** Kotlin
-- **UI Framework:** Jetpack Compose (Material 3), Material Icons Extended
-- **Android Architecture Components:**
-  - Lifecycle & ViewModel Compose
-  - Room (using KSP for annotation processing)
-  - WorkManager
-- **Build System:** Gradle (Kotlin DSL Version Catalogs)
+#### Option 1: Automated Updates via Obtainium (Recommended)
+Deploying WakeTracker via [Obtainium](https://github.com/ImranR98/Obtainium) ensures secure, automated background updates directly from this repository.
+1. Install Obtainium on your Android device.
+2. Add a new application within Obtainium.
+3. Input the repository URL: `https://github.com/InvisibleOS/WakeTracker`
+4. Execute the installation.
 
-## Development & Requirements
+#### Option 2: Direct Release Download
+1. Navigate to the **[Releases](../../releases)** section of this repository.
+2. Select the latest available release version.
+3. Download the `app-release.apk` asset.
+4. Proceed with manual installation on your Android device (ensure "Install unknown apps" permissions are granted).
 
-- **Minimum SDK:** API 34
-- **Target SDK:** API 35
-- **Java / JVM Toolchain:** Version 17
+---
 
-## License
+### Configuration Guide
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+1. **Procure an NFC Tag:** The application requires a standard, writable NFC tag or sticker.
+2. **Program the Tag:** Access the Settings page within the WakeTracker application and utilize the "Setup NFC Tag" feature to natively encode your tag with the required dismissal code.
+3. **Strategic Placement:** Secure the NFC tag in a location that forces you out of the bedroom.
+4. **Initialize Schedule:** Open the WakeTracker application, configure the targeted wake-time, and ensure all device permissions are granted.
+
+---
+
+<details>
+<summary><b>License</b></summary>
+
+This software is distributed under the [Apache License 2.0](LICENSE).
+</details>
