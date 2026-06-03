@@ -48,6 +48,12 @@ Deploying WakeTracker via [Obtainium](https://github.com/ImranR98/Obtainium) ens
 
 ---
 
+### Current Goals
+
+- **React Native Rewrite:** Rewrite the complete app in React Native to support iOS devices too.
+
+---
+
 <details>
 <summary><b>License</b></summary>
 
