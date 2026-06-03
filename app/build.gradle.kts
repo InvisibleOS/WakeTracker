@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.shivansh.waketracker"
-        minSdk = 36
+        minSdk = 26
         targetSdk = 36
 
         versionCode = 11
